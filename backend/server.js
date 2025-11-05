@@ -14,15 +14,23 @@ app.use(cors()); // Enable CORS for frontend
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery_shop')
-.then(() => {
-  console.log('Connected to MongoDB');
-})
-.catch((error) => {
-  console.error('MongoDB connection error:', error);
-  process.exit(1);
-});
+// MongoDB Connection with retry logic
+const connectWithRetry = () => {
+  const mongoURI = process.env.MONGODB_URI || 'mongodb://mongo:27017/grocery_shop';
+  mongoose.connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error.message);
+    setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+  });
+};
+
+connectWithRetry();
 
 // Routes
 app.use('/api/products', productRoutes);
@@ -44,11 +52,10 @@ app.use((req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
 
 module.exports = app;
-
